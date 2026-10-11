@@ -15,7 +15,7 @@ capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
 confirm_changeset = true
 resolve_s3 = true
 region = "eu-west-1"
-parameter_overrides = "Stage=dev"
+parameter_overrides = "Stage=dev AllowedOrigin=https://main.d2fp54cfbnqyk7.amplifyapp.com"
 
 [default.sync.parameters]
 watch = true
