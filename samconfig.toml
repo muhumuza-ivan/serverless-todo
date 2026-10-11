@@ -1,5 +1,9 @@
 version = 0.1
 
+# Local `sam` commands use the [default] environment. The GitHub Actions pipeline
+# passes --config-env ci (not defined here) so none of these values apply in CI;
+# it supplies stack, bucket, role and parameters explicitly per stage.
+
 [default.global.parameters]
 stack_name = "serverless-todo-dev"
 
@@ -15,7 +19,7 @@ capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
 confirm_changeset = true
 resolve_s3 = true
 region = "eu-west-1"
-parameter_overrides = "Stage=dev AllowedOrigin=https://main.d2fp54cfbnqyk7.amplifyapp.com"
+parameter_overrides = "Stage=dev"
 
 [default.sync.parameters]
 watch = true

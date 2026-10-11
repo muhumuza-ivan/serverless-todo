@@ -1,0 +1,24 @@
+version = 0.1
+
+[default.pipeline_bootstrap.parameters]
+oidc_provider_url = "https://token.actions.githubusercontent.com"
+oidc_client_id = "sts.amazonaws.com"
+github_org = "muhumuza-ivan"
+github_repo = "serverless-todo"
+deployment_branch = "main"
+oidc_provider = "github-actions"
+permissions_provider = "OpenID Connect (OIDC)"
+
+[dev.pipeline_bootstrap.parameters]
+pipeline_execution_role = "arn:aws:iam::765812221756:role/aws-sam-cli-managed-dev-pipel-PipelineExecutionRole-dYkUYzMnzB0j"
+cloudformation_execution_role = "arn:aws:iam::765812221756:role/aws-sam-cli-managed-dev-p-CloudFormationExecutionRo-FfJohSCVEYBb"
+artifacts_bucket = "aws-sam-cli-managed-dev-pipeline-r-artifactsbucket-syrqtdnldf3f"
+image_repository = ""
+region = "eu-west-1"
+
+[prod.pipeline_bootstrap.parameters]
+pipeline_execution_role = "arn:aws:iam::765812221756:role/aws-sam-cli-managed-prod-pipe-PipelineExecutionRole-5jAgqbc2063Q"
+cloudformation_execution_role = "arn:aws:iam::765812221756:role/aws-sam-cli-managed-prod--CloudFormationExecutionRo-DS7h6k9hZEkG"
+artifacts_bucket = "aws-sam-cli-managed-prod-pipeline--artifactsbucket-dedd6dhlnzoz"
+image_repository = ""
+region = "eu-west-1"

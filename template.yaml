@@ -16,8 +16,8 @@ Parameters:
     Description: CloudWatch Logs retention for all Lambda log groups.
   AllowedOrigin:
     Type: String
-    Default: '*'
-    Description: CORS origin allowed to call the API (set to the Amplify app URL once it exists).
+    Default: ''
+    Description: Optional CORS origin override (e.g. '*' or http://localhost:5173 for local development). Empty = this stage's Amplify app URL.
   AlarmEmail:
     Type: String
     Default: ''
@@ -39,6 +39,7 @@ Parameters:
 Conditions:
   HasAlarmEmail: !Not [!Equals [!Ref AlarmEmail, '']]
   IsProd: !Equals [!Ref Stage, prod]
+  HasCustomOrigin: !Not [!Equals [!Ref AllowedOrigin, '']]
 
 Globals:
   Function:
@@ -239,7 +240,7 @@ Resources:
       Cors:
         AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
         AllowHeaders: "'Content-Type,Authorization'"
-        AllowOrigin: !Sub "'${AllowedOrigin}'"
+        AllowOrigin: !If [HasCustomOrigin, !Sub "'${AllowedOrigin}'", !Sub "'https://${FrontendBranch}.${AmplifyApp.DefaultDomain}'"]
       Auth:
         DefaultAuthorizer: CognitoAuthorizer
         AddDefaultAuthorizerToCorsPreflight: false
@@ -252,12 +253,12 @@ Resources:
         DEFAULT_4XX:
           ResponseParameters:
             Headers:
-              Access-Control-Allow-Origin: !Sub "'${AllowedOrigin}'"
+              Access-Control-Allow-Origin: !If [HasCustomOrigin, !Sub "'${AllowedOrigin}'", !Sub "'https://${FrontendBranch}.${AmplifyApp.DefaultDomain}'"]
               Access-Control-Allow-Headers: "'Content-Type,Authorization'"
         DEFAULT_5XX:
           ResponseParameters:
             Headers:
-              Access-Control-Allow-Origin: !Sub "'${AllowedOrigin}'"
+              Access-Control-Allow-Origin: !If [HasCustomOrigin, !Sub "'${AllowedOrigin}'", !Sub "'https://${FrontendBranch}.${AmplifyApp.DefaultDomain}'"]
               Access-Control-Allow-Headers: "'Content-Type,Authorization'"
       MethodSettings:
         - ResourcePath: '/*'
@@ -288,7 +289,7 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref TasksTable
-          ALLOWED_ORIGIN: !Ref AllowedOrigin
+          ALLOWED_ORIGIN: !If [HasCustomOrigin, !Ref AllowedOrigin, !Sub "https://${FrontendBranch}.${AmplifyApp.DefaultDomain}"]
       Events:
         ListTasks:
           Type: Api
@@ -954,6 +955,8 @@ Resources:
   # ---------------------------------------------------------------------------
   # Frontend hosting (Amplify). Backend values are injected as build-time
   # environment variables read by the React app (src/amplify.ts).
+  # They live on the branch, not the app, so the dependency chain is
+  # App -> API (CORS origin = app URL) -> Branch (API URL), with no cycle.
   # ---------------------------------------------------------------------------
   AmplifyApp:
     Type: AWS::Amplify::App
@@ -963,15 +966,6 @@ Resources:
       Repository: !Ref FrontendRepositoryUrl
       AccessToken: !Sub '{{resolve:secretsmanager:${GitHubTokenSecretName}:SecretString}}'
       Platform: WEB
-      EnvironmentVariables:
-        - Name: VITE_REGION
-          Value: !Ref AWS::Region
-        - Name: VITE_USER_POOL_ID
-          Value: !Ref UserPool
-        - Name: VITE_USER_POOL_CLIENT_ID
-          Value: !Ref UserPoolClient
-        - Name: VITE_API_URL
-          Value: !Sub https://${TasksApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
       # Single-page app: serve index.html for any path that isn't a static asset.
       CustomRules:
         - Source: '</^[^.]+$|\.(?!(css|gif|ico|jpg|jpeg|js|png|txt|svg|woff|woff2|ttf|map|json|webp)$)([^.]+$)/>'
@@ -985,6 +979,15 @@ Resources:
       BranchName: !Ref FrontendBranch
       EnableAutoBuild: true
       Stage: !If [IsProd, PRODUCTION, DEVELOPMENT]
+      EnvironmentVariables:
+        - Name: VITE_REGION
+          Value: !Ref AWS::Region
+        - Name: VITE_USER_POOL_ID
+          Value: !Ref UserPool
+        - Name: VITE_USER_POOL_CLIENT_ID
+          Value: !Ref UserPoolClient
+        - Name: VITE_API_URL
+          Value: !Sub https://${TasksApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
 
 Outputs:
   AmplifyAppId:

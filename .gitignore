@@ -1,4 +1,5 @@
-.aws-sam/
+.aws-sam/*
+!.aws-sam/pipeline/
 backend/target/
 *.class
 .idea/
