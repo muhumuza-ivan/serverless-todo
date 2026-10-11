@@ -35,7 +35,7 @@ public class TasksApiHandler implements RequestHandler<APIGatewayProxyRequestEve
     private final String allowedOrigin;
 
     public TasksApiHandler() {
-        this(new TaskService(new TaskRepository(Clients.DYNAMODB, System.getenv("TABLE_NAME")), Clock.systemUTC()),
+        this(new TaskService(new TaskRepository(Clients.dynamoDb(), System.getenv("TABLE_NAME")), Clock.systemUTC()),
                 System.getenv().getOrDefault("ALLOWED_ORIGIN", "*"));
     }
 

@@ -319,6 +319,201 @@ Resources:
       LogGroupName: !Sub /aws/lambda/${AWS::StackName}-tasks-api
       RetentionInDays: !Ref LogRetentionDays
 
+  # ---------------------------------------------------------------------------
+  # Expiry scheduling: DynamoDB Stream -> StreamProcessor -> SQS FIFO ->
+  #                    Scheduler fn -> EventBridge Scheduler -> Expiry fn
+  # ---------------------------------------------------------------------------
+  TaskEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${AWS::StackName}-task-events.fifo
+      FifoQueue: true
+      ContentBasedDeduplication: false
+      DeduplicationScope: messageGroup
+      FifoThroughputLimit: perMessageGroupId
+      # >= 6x the consumer's timeout, as recommended for Lambda SQS event sources
+      VisibilityTimeout: 90
+      SqsManagedSseEnabled: true
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt TaskEventsDlq.Arn
+        maxReceiveCount: 5
+
+  TaskEventsDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${AWS::StackName}-task-events-dlq.fifo
+      FifoQueue: true
+      MessageRetentionPeriod: 1209600
+      SqsManagedSseEnabled: true
+
+  # Stream records the StreamProcessor could not forward after all retries.
+  StreamFailuresDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${AWS::StackName}-stream-failures-dlq
+      MessageRetentionPeriod: 1209600
+      SqsManagedSseEnabled: true
+
+  # Expiry invocations EventBridge Scheduler could not deliver after all retries.
+  ExpiryDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${AWS::StackName}-expiry-dlq
+      MessageRetentionPeriod: 1209600
+      SqsManagedSseEnabled: true
+
+  TaskExpiryScheduleGroup:
+    Type: AWS::Scheduler::ScheduleGroup
+    Properties:
+      Name: !Sub ${AWS::StackName}-task-expiry
+
+  # Assumed by EventBridge Scheduler to invoke the expiry function.
+  SchedulerInvokeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub arn:${AWS::Partition}:scheduler:${AWS::Region}:${AWS::AccountId}:schedule-group/${TaskExpiryScheduleGroup}
+      Policies:
+        - PolicyName: invoke-expiry
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !Ref ExpiryFunction.Alias
+              - Effect: Allow
+                Action: sqs:SendMessage
+                Resource: !GetAtt ExpiryDlq.Arn
+
+  StreamProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-stream-processor
+      Description: Turns task changes on the DynamoDB stream into SCHEDULE/CANCEL messages on the FIFO queue.
+      Handler: com.todo.stream.StreamProcessorHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref StreamProcessorLogGroup
+      Environment:
+        Variables:
+          TASK_EVENTS_QUEUE_URL: !Ref TaskEventsQueue
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: sqs:SendMessage
+              Resource:
+                - !GetAtt TaskEventsQueue.Arn
+                - !GetAtt StreamFailuresDlq.Arn
+      Events:
+        TaskChanges:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt TasksTable.StreamArn
+            # TRIM_HORIZON: a new or replaced mapping never skips records written while it
+            # initialises; replays are harmless because the pipeline is idempotent.
+            StartingPosition: TRIM_HORIZON
+            BatchSize: 100
+            MaximumBatchingWindowInSeconds: 1
+            BisectBatchOnFunctionError: true
+            MaximumRetryAttempts: 10
+            MaximumRecordAgeInSeconds: 3600
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+            DestinationConfig:
+              OnFailure:
+                Type: SQS
+                Destination: !GetAtt StreamFailuresDlq.Arn
+            FilterCriteria:
+              Filters:
+                - Pattern: '{"dynamodb":{"Keys":{"SK":{"S":[{"prefix":"TASK#"}]}}}}'
+
+  StreamProcessorLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-stream-processor
+      RetentionInDays: !Ref LogRetentionDays
+
+  SchedulerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-scheduler
+      Description: Creates/replaces or deletes each task's one-time EventBridge expiry schedule.
+      Handler: com.todo.scheduler.SchedulerHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref SchedulerLogGroup
+      Environment:
+        Variables:
+          SCHEDULE_GROUP_NAME: !Ref TaskExpiryScheduleGroup
+          EXPIRY_FUNCTION_ARN: !Ref ExpiryFunction.Alias
+          SCHEDULER_ROLE_ARN: !GetAtt SchedulerInvokeRole.Arn
+          EXPIRY_DLQ_ARN: !GetAtt ExpiryDlq.Arn
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - scheduler:CreateSchedule
+                - scheduler:UpdateSchedule
+                - scheduler:DeleteSchedule
+              Resource: !Sub arn:${AWS::Partition}:scheduler:${AWS::Region}:${AWS::AccountId}:schedule/${TaskExpiryScheduleGroup}/task-*
+            - Effect: Allow
+              Action: iam:PassRole
+              Resource: !GetAtt SchedulerInvokeRole.Arn
+              Condition:
+                StringEquals:
+                  iam:PassedToService: scheduler.amazonaws.com
+      Events:
+        TaskEvents:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt TaskEventsQueue.Arn
+            BatchSize: 10
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+
+  SchedulerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-scheduler
+      RetentionInDays: !Ref LogRetentionDays
+
+  ExpiryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-expiry
+      Description: At a task's deadline, marks it Expired (if still Pending) and emails the owner via SNS.
+      Handler: com.todo.expiry.ExpiryHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref ExpiryLogGroup
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TasksTable
+          TOPIC_ARN: !Ref TaskNotificationsTopic
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+              Resource: !GetAtt TasksTable.Arn
+            - Effect: Allow
+              Action: sns:Publish
+              Resource: !Ref TaskNotificationsTopic
+
+  ExpiryLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-expiry
+      RetentionInDays: !Ref LogRetentionDays
+
 Outputs:
   ApiUrl:
     Value: !Sub https://${TasksApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}

@@ -30,7 +30,7 @@ public class PostAuthHandler implements RequestHandler<Map<String, Object>, Map<
     private final String topicArn;
 
     public PostAuthHandler() {
-        this(Clients.SNS, System.getenv("TOPIC_ARN"));
+        this(Clients.sns(), System.getenv("TOPIC_ARN"));
     }
 
     PostAuthHandler(SnsClient sns, String topicArn) {
