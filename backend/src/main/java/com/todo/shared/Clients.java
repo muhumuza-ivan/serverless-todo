@@ -3,6 +3,7 @@ package com.todo.shared;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.sns.SnsClient;
 
 /**
@@ -17,6 +18,12 @@ public final class Clients {
     private static final Region REGION = Region.of(System.getenv().getOrDefault("AWS_REGION", "eu-west-1"));
 
     public static final SnsClient SNS = SnsClient.builder()
+            .region(REGION)
+            .credentialsProvider(DefaultCredentialsProvider.builder().build())
+            .httpClient(UrlConnectionHttpClient.create())
+            .build();
+
+    public static final DynamoDbClient DYNAMODB = DynamoDbClient.builder()
             .region(REGION)
             .credentialsProvider(DefaultCredentialsProvider.builder().build())
             .httpClient(UrlConnectionHttpClient.create())

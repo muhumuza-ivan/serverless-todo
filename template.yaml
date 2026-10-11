@@ -14,6 +14,10 @@ Parameters:
     Type: Number
     Default: 14
     Description: CloudWatch Logs retention for all Lambda log groups.
+  AllowedOrigin:
+    Type: String
+    Default: '*'
+    Description: CORS origin allowed to call the API (set to the Amplify app URL once it exists).
 
 Globals:
   Function:
@@ -179,7 +183,145 @@ Resources:
       LogGroupName: !Sub /aws/lambda/${AWS::StackName}-post-auth
       RetentionInDays: !Ref LogRetentionDays
 
+  # ---------------------------------------------------------------------------
+  # REST API
+  # ---------------------------------------------------------------------------
+  # Region-wide setting that lets API Gateway write execution/access logs.
+  ApiGatewayCloudWatchRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+
+  ApiGatewayAccount:
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn: !GetAtt ApiGatewayCloudWatchRole.Arn
+
+  TasksApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/apigateway/${AWS::StackName}-access
+      RetentionInDays: !Ref LogRetentionDays
+
+  TasksApi:
+    Type: AWS::Serverless::Api
+    DependsOn: ApiGatewayAccount
+    Properties:
+      Name: !Sub ${AWS::StackName}-api
+      StageName: !Ref Stage
+      TracingEnabled: true
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowOrigin: !Sub "'${AllowedOrigin}'"
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        AddDefaultAuthorizerToCorsPreflight: false
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt UserPool.Arn
+      # CORS headers on API Gateway-generated errors (e.g. 401 from the authorizer),
+      # so the browser can read them.
+      GatewayResponses:
+        DEFAULT_4XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: !Sub "'${AllowedOrigin}'"
+              Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+        DEFAULT_5XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: !Sub "'${AllowedOrigin}'"
+              Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          LoggingLevel: INFO
+          MetricsEnabled: true
+          DataTraceEnabled: false
+          ThrottlingBurstLimit: 50
+          ThrottlingRateLimit: 100
+      AccessLogSetting:
+        DestinationArn: !GetAtt TasksApiAccessLogGroup.Arn
+        Format: >-
+          {"requestId":"$context.requestId","ip":"$context.identity.sourceIp",
+          "user":"$context.authorizer.claims.sub","requestTime":"$context.requestTime",
+          "httpMethod":"$context.httpMethod","resourcePath":"$context.resourcePath",
+          "status":"$context.status","responseLength":"$context.responseLength",
+          "integrationLatency":"$context.integrationLatency","latency":"$context.responseLatency"}
+
+  TasksApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-tasks-api
+      Description: Task CRUD for the authenticated user.
+      Handler: com.todo.api.TasksApiHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref TasksApiLogGroup
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TasksTable
+          ALLOWED_ORIGIN: !Ref AllowedOrigin
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt TasksTable.Arn
+                - !Sub ${TasksTable.Arn}/index/GSI1
+      Events:
+        ListTasks:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TasksApi
+            Path: /tasks
+            Method: GET
+        CreateTask:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TasksApi
+            Path: /tasks
+            Method: POST
+        GetTask:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TasksApi
+            Path: /tasks/{taskId}
+            Method: GET
+        UpdateTask:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TasksApi
+            Path: /tasks/{taskId}
+            Method: PUT
+        DeleteTask:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TasksApi
+            Path: /tasks/{taskId}
+            Method: DELETE
+
+  TasksApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-tasks-api
+      RetentionInDays: !Ref LogRetentionDays
+
 Outputs:
+  ApiUrl:
+    Value: !Sub https://${TasksApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
   Region:
     Value: !Ref AWS::Region
   UserPoolId:
