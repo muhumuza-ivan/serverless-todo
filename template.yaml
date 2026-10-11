@@ -23,8 +23,22 @@ Parameters:
     Default: ''
     Description: Optional email address subscribed to operational alarms (leave empty to skip).
 
+  FrontendRepositoryUrl:
+    Type: String
+    Default: https://github.com/muhumuza-ivan/serverless-todo-frontend
+    Description: GitHub repository of the frontend app built and hosted by Amplify.
+  FrontendBranch:
+    Type: String
+    Default: main
+    Description: Frontend branch deployed by Amplify.
+  GitHubTokenSecretName:
+    Type: String
+    Default: serverless-todo/github-token
+    Description: Secrets Manager secret (plain string) holding a GitHub token Amplify uses to access the frontend repository.
+
 Conditions:
   HasAlarmEmail: !Not [!Equals [!Ref AlarmEmail, '']]
+  IsProd: !Equals [!Ref Stage, prod]
 
 Globals:
   Function:
@@ -937,7 +951,46 @@ Resources:
           }
         - ApiName: !Sub ${AWS::StackName}-api
 
+  # ---------------------------------------------------------------------------
+  # Frontend hosting (Amplify). Backend values are injected as build-time
+  # environment variables read by the React app (src/amplify.ts).
+  # ---------------------------------------------------------------------------
+  AmplifyApp:
+    Type: AWS::Amplify::App
+    Properties:
+      Name: !Sub ${AWS::StackName}-frontend
+      Description: Serverless To-Do web frontend
+      Repository: !Ref FrontendRepositoryUrl
+      AccessToken: !Sub '{{resolve:secretsmanager:${GitHubTokenSecretName}:SecretString}}'
+      Platform: WEB
+      EnvironmentVariables:
+        - Name: VITE_REGION
+          Value: !Ref AWS::Region
+        - Name: VITE_USER_POOL_ID
+          Value: !Ref UserPool
+        - Name: VITE_USER_POOL_CLIENT_ID
+          Value: !Ref UserPoolClient
+        - Name: VITE_API_URL
+          Value: !Sub https://${TasksApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
+      # Single-page app: serve index.html for any path that isn't a static asset.
+      CustomRules:
+        - Source: '</^[^.]+$|\.(?!(css|gif|ico|jpg|jpeg|js|png|txt|svg|woff|woff2|ttf|map|json|webp)$)([^.]+$)/>'
+          Target: /index.html
+          Status: '200'
+
+  AmplifyBranch:
+    Type: AWS::Amplify::Branch
+    Properties:
+      AppId: !GetAtt AmplifyApp.AppId
+      BranchName: !Ref FrontendBranch
+      EnableAutoBuild: true
+      Stage: !If [IsProd, PRODUCTION, DEVELOPMENT]
+
 Outputs:
+  AmplifyAppId:
+    Value: !GetAtt AmplifyApp.AppId
+  AmplifyAppUrl:
+    Value: !Sub https://${FrontendBranch}.${AmplifyApp.DefaultDomain}
   OperationsDashboardUrl:
     Value: !Sub https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${AWS::StackName}-operations
   OpsAlarmsTopicArn:
