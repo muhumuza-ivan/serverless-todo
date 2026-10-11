@@ -18,6 +18,13 @@ Parameters:
     Type: String
     Default: '*'
     Description: CORS origin allowed to call the API (set to the Amplify app URL once it exists).
+  AlarmEmail:
+    Type: String
+    Default: ''
+    Description: Optional email address subscribed to operational alarms (leave empty to skip).
+
+Conditions:
+  HasAlarmEmail: !Not [!Equals [!Ref AlarmEmail, '']]
 
 Globals:
   Function:
@@ -139,6 +146,7 @@ Resources:
       FunctionName: !Sub ${AWS::StackName}-pre-signup
       Description: Auto-confirms new users and verifies their email.
       Handler: com.todo.auth.PreSignUpHandler::handleRequest
+      Role: !GetAtt PreSignUpFunctionRole.Arn
       LoggingConfig:
         LogGroup: !Ref PreSignUpLogGroup
       Events:
@@ -160,16 +168,12 @@ Resources:
       FunctionName: !Sub ${AWS::StackName}-post-auth
       Description: Subscribes the authenticated user's email to the task notifications topic.
       Handler: com.todo.auth.PostAuthHandler::handleRequest
+      Role: !GetAtt PostAuthFunctionRole.Arn
       LoggingConfig:
         LogGroup: !Ref PostAuthLogGroup
       Environment:
         Variables:
           TOPIC_ARN: !Ref TaskNotificationsTopic
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action: sns:Subscribe
-              Resource: !Ref TaskNotificationsTopic
       Events:
         PostAuthentication:
           Type: Cognito
@@ -264,23 +268,13 @@ Resources:
       FunctionName: !Sub ${AWS::StackName}-tasks-api
       Description: Task CRUD for the authenticated user.
       Handler: com.todo.api.TasksApiHandler::handleRequest
+      Role: !GetAtt TasksApiFunctionRole.Arn
       LoggingConfig:
         LogGroup: !Ref TasksApiLogGroup
       Environment:
         Variables:
           TABLE_NAME: !Ref TasksTable
           ALLOWED_ORIGIN: !Ref AllowedOrigin
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:GetItem
-                - dynamodb:PutItem
-                - dynamodb:DeleteItem
-                - dynamodb:Query
-              Resource:
-                - !GetAtt TasksTable.Arn
-                - !Sub ${TasksTable.Arn}/index/GSI1
       Events:
         ListTasks:
           Type: Api
@@ -401,18 +395,12 @@ Resources:
       FunctionName: !Sub ${AWS::StackName}-stream-processor
       Description: Turns task changes on the DynamoDB stream into SCHEDULE/CANCEL messages on the FIFO queue.
       Handler: com.todo.stream.StreamProcessorHandler::handleRequest
+      Role: !GetAtt StreamProcessorFunctionRole.Arn
       LoggingConfig:
         LogGroup: !Ref StreamProcessorLogGroup
       Environment:
         Variables:
           TASK_EVENTS_QUEUE_URL: !Ref TaskEventsQueue
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action: sqs:SendMessage
-              Resource:
-                - !GetAtt TaskEventsQueue.Arn
-                - !GetAtt StreamFailuresDlq.Arn
       Events:
         TaskChanges:
           Type: DynamoDB
@@ -448,6 +436,7 @@ Resources:
       FunctionName: !Sub ${AWS::StackName}-scheduler
       Description: Creates/replaces or deletes each task's one-time EventBridge expiry schedule.
       Handler: com.todo.scheduler.SchedulerHandler::handleRequest
+      Role: !GetAtt SchedulerFunctionRole.Arn
       LoggingConfig:
         LogGroup: !Ref SchedulerLogGroup
       Environment:
@@ -456,20 +445,6 @@ Resources:
           EXPIRY_FUNCTION_ARN: !Ref ExpiryFunction.Alias
           SCHEDULER_ROLE_ARN: !GetAtt SchedulerInvokeRole.Arn
           EXPIRY_DLQ_ARN: !GetAtt ExpiryDlq.Arn
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - scheduler:CreateSchedule
-                - scheduler:UpdateSchedule
-                - scheduler:DeleteSchedule
-              Resource: !Sub arn:${AWS::Partition}:scheduler:${AWS::Region}:${AWS::AccountId}:schedule/${TaskExpiryScheduleGroup}/task-*
-            - Effect: Allow
-              Action: iam:PassRole
-              Resource: !GetAtt SchedulerInvokeRole.Arn
-              Condition:
-                StringEquals:
-                  iam:PassedToService: scheduler.amazonaws.com
       Events:
         TaskEvents:
           Type: SQS
@@ -491,22 +466,13 @@ Resources:
       FunctionName: !Sub ${AWS::StackName}-expiry
       Description: At a task's deadline, marks it Expired (if still Pending) and emails the owner via SNS.
       Handler: com.todo.expiry.ExpiryHandler::handleRequest
+      Role: !GetAtt ExpiryFunctionRole.Arn
       LoggingConfig:
         LogGroup: !Ref ExpiryLogGroup
       Environment:
         Variables:
           TABLE_NAME: !Ref TasksTable
           TOPIC_ARN: !Ref TaskNotificationsTopic
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:GetItem
-                - dynamodb:UpdateItem
-              Resource: !GetAtt TasksTable.Arn
-            - Effect: Allow
-              Action: sns:Publish
-              Resource: !Ref TaskNotificationsTopic
 
   ExpiryLogGroup:
     Type: AWS::Logs::LogGroup
@@ -514,7 +480,468 @@ Resources:
       LogGroupName: !Sub /aws/lambda/${AWS::StackName}-expiry
       RetentionInDays: !Ref LogRetentionDays
 
+  # ---------------------------------------------------------------------------
+  # IAM: one least-privilege role per function. Explicit roles replace the broad
+  # AWS managed policies SAM would attach (logs on *, SQS on *, streams on *).
+  # X-Ray actions do not support resource-level permissions, hence "*".
+  # ---------------------------------------------------------------------------
+  PreSignUpFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: pre-signup
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt PreSignUpLogGroup.Arn
+              - Effect: Allow
+                Action: [xray:PutTraceSegments, xray:PutTelemetryRecords]
+                Resource: '*'
+
+  PostAuthFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: post-auth
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt PostAuthLogGroup.Arn
+              - Effect: Allow
+                Action: [xray:PutTraceSegments, xray:PutTelemetryRecords]
+                Resource: '*'
+              - Effect: Allow
+                Action: sns:Subscribe
+                Resource: !Ref TaskNotificationsTopic
+                Condition:
+                  StringEquals:
+                    sns:Protocol: email
+
+  TasksApiFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: tasks-api
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt TasksApiLogGroup.Arn
+              - Effect: Allow
+                Action: [xray:PutTraceSegments, xray:PutTelemetryRecords]
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                Resource:
+                  - !GetAtt TasksTable.Arn
+                  - !Sub ${TasksTable.Arn}/index/GSI1
+
+  StreamProcessorFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: stream-processor
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt StreamProcessorLogGroup.Arn
+              - Effect: Allow
+                Action: [xray:PutTraceSegments, xray:PutTelemetryRecords]
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - dynamodb:DescribeStream
+                  - dynamodb:GetRecords
+                  - dynamodb:GetShardIterator
+                  - dynamodb:ListStreams
+                Resource: !Sub ${TasksTable.Arn}/stream/*
+              - Effect: Allow
+                Action: sqs:SendMessage
+                Resource:
+                  - !GetAtt TaskEventsQueue.Arn
+                  - !GetAtt StreamFailuresDlq.Arn
+
+  SchedulerFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: scheduler
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt SchedulerLogGroup.Arn
+              - Effect: Allow
+                Action: [xray:PutTraceSegments, xray:PutTelemetryRecords]
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:ChangeMessageVisibility
+                  - sqs:GetQueueAttributes
+                Resource: !GetAtt TaskEventsQueue.Arn
+              - Effect: Allow
+                Action:
+                  - scheduler:CreateSchedule
+                  - scheduler:UpdateSchedule
+                  - scheduler:DeleteSchedule
+                Resource: !Sub arn:${AWS::Partition}:scheduler:${AWS::Region}:${AWS::AccountId}:schedule/${TaskExpiryScheduleGroup}/task-*
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt SchedulerInvokeRole.Arn
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: scheduler.amazonaws.com
+
+  ExpiryFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: expiry
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt ExpiryLogGroup.Arn
+              - Effect: Allow
+                Action: [xray:PutTraceSegments, xray:PutTelemetryRecords]
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                Resource: !GetAtt TasksTable.Arn
+              - Effect: Allow
+                Action: sns:Publish
+                Resource: !Ref TaskNotificationsTopic
+
+  # ---------------------------------------------------------------------------
+  # Observability: business metrics from structured logs, alarms, dashboard
+  # ---------------------------------------------------------------------------
+  TasksExpiredMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref ExpiryLogGroup
+      FilterPattern: '{ $.message = "Expired task*" }'
+      MetricTransformations:
+        - MetricNamespace: !Sub ServerlessTodo/${Stage}
+          MetricName: TasksExpired
+          MetricValue: '1'
+          Unit: Count
+
+  ExpiryNotificationsMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref ExpiryLogGroup
+      FilterPattern: '{ $.message = "Notified owner*" }'
+      MetricTransformations:
+        - MetricNamespace: !Sub ServerlessTodo/${Stage}
+          MetricName: ExpiryNotificationsSent
+          MetricValue: '1'
+          Unit: Count
+
+  SchedulesCreatedMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref SchedulerLogGroup
+      FilterPattern: '{ ($.message = "Created schedule*") || ($.message = "Updated schedule*") }'
+      MetricTransformations:
+        - MetricNamespace: !Sub ServerlessTodo/${Stage}
+          MetricName: SchedulesCreated
+          MetricValue: '1'
+          Unit: Count
+
+  SchedulesCancelledMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref SchedulerLogGroup
+      FilterPattern: '{ $.message = "Cancelled schedule*" }'
+      MetricTransformations:
+        - MetricNamespace: !Sub ServerlessTodo/${Stage}
+          MetricName: SchedulesCancelled
+          MetricValue: '1'
+          Unit: Count
+
+  OpsAlarmsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${AWS::StackName}-ops-alarms
+      DisplayName: To-Do Ops Alarms
+
+  OpsAlarmsEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlarmEmail
+    Properties:
+      TopicArn: !Ref OpsAlarmsTopic
+      Protocol: email
+      Endpoint: !Ref AlarmEmail
+
+  LambdaErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${AWS::StackName}-lambda-errors
+      AlarmDescription: One or more Lambda functions returned errors.
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Threshold: 1
+      EvaluationPeriods: 1
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref OpsAlarmsTopic]
+      OKActions: [!Ref OpsAlarmsTopic]
+      Metrics:
+        - Id: total
+          Expression: SUM([e1, e2, e3, e4, e5, e6])
+          Label: Total Lambda errors
+        - Id: e1
+          ReturnData: false
+          MetricStat: {Metric: {Namespace: AWS/Lambda, MetricName: Errors, Dimensions: [{Name: FunctionName, Value: !Ref PreSignUpFunction}]}, Period: 300, Stat: Sum}
+        - Id: e2
+          ReturnData: false
+          MetricStat: {Metric: {Namespace: AWS/Lambda, MetricName: Errors, Dimensions: [{Name: FunctionName, Value: !Ref PostAuthFunction}]}, Period: 300, Stat: Sum}
+        - Id: e3
+          ReturnData: false
+          MetricStat: {Metric: {Namespace: AWS/Lambda, MetricName: Errors, Dimensions: [{Name: FunctionName, Value: !Ref TasksApiFunction}]}, Period: 300, Stat: Sum}
+        - Id: e4
+          ReturnData: false
+          MetricStat: {Metric: {Namespace: AWS/Lambda, MetricName: Errors, Dimensions: [{Name: FunctionName, Value: !Ref StreamProcessorFunction}]}, Period: 300, Stat: Sum}
+        - Id: e5
+          ReturnData: false
+          MetricStat: {Metric: {Namespace: AWS/Lambda, MetricName: Errors, Dimensions: [{Name: FunctionName, Value: !Ref SchedulerFunction}]}, Period: 300, Stat: Sum}
+        - Id: e6
+          ReturnData: false
+          MetricStat: {Metric: {Namespace: AWS/Lambda, MetricName: Errors, Dimensions: [{Name: FunctionName, Value: !Ref ExpiryFunction}]}, Period: 300, Stat: Sum}
+
+  ApiServerErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${AWS::StackName}-api-5xx
+      AlarmDescription: The tasks API returned 5XX responses.
+      Namespace: AWS/ApiGateway
+      MetricName: 5XXError
+      Dimensions:
+        - Name: ApiName
+          Value: !Sub ${AWS::StackName}-api
+        - Name: Stage
+          Value: !Ref Stage
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref OpsAlarmsTopic]
+      OKActions: [!Ref OpsAlarmsTopic]
+
+  DeadLetterMessagesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${AWS::StackName}-dead-letters
+      AlarmDescription: Messages landed in a dead-letter queue (task events, stream failures or expiry delivery).
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Threshold: 1
+      EvaluationPeriods: 1
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref OpsAlarmsTopic]
+      OKActions: [!Ref OpsAlarmsTopic]
+      Metrics:
+        - Id: total
+          Expression: SUM([d1, d2, d3])
+          Label: Dead-lettered messages
+        - Id: d1
+          ReturnData: false
+          MetricStat: {Metric: {Namespace: AWS/SQS, MetricName: ApproximateNumberOfMessagesVisible, Dimensions: [{Name: QueueName, Value: !GetAtt TaskEventsDlq.QueueName}]}, Period: 60, Stat: Maximum}
+        - Id: d2
+          ReturnData: false
+          MetricStat: {Metric: {Namespace: AWS/SQS, MetricName: ApproximateNumberOfMessagesVisible, Dimensions: [{Name: QueueName, Value: !GetAtt StreamFailuresDlq.QueueName}]}, Period: 60, Stat: Maximum}
+        - Id: d3
+          ReturnData: false
+          MetricStat: {Metric: {Namespace: AWS/SQS, MetricName: ApproximateNumberOfMessagesVisible, Dimensions: [{Name: QueueName, Value: !GetAtt ExpiryDlq.QueueName}]}, Period: 60, Stat: Maximum}
+
+  TaskEventsBacklogAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${AWS::StackName}-task-events-backlog
+      AlarmDescription: Task events are waiting more than 5 minutes; schedules may be created or cancelled late.
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt TaskEventsQueue.QueueName
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 3
+      Threshold: 300
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref OpsAlarmsTopic]
+      OKActions: [!Ref OpsAlarmsTopic]
+
+  StreamIteratorAgeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${AWS::StackName}-stream-lag
+      AlarmDescription: The stream processor is more than a minute behind the tasks table stream.
+      Namespace: AWS/Lambda
+      MetricName: IteratorAge
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref StreamProcessorFunction
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 3
+      Threshold: 60000
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref OpsAlarmsTopic]
+      OKActions: [!Ref OpsAlarmsTopic]
+
+  OperationsDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub ${AWS::StackName}-operations
+      DashboardBody: !Sub
+        - |
+          {
+            "widgets": [
+              {"type": "alarm", "x": 0, "y": 0, "width": 24, "height": 3,
+               "properties": {"title": "Alarms", "alarms": [
+                 "${LambdaErrorsAlarm.Arn}", "${ApiServerErrorsAlarm.Arn}", "${DeadLetterMessagesAlarm.Arn}",
+                 "${TaskEventsBacklogAlarm.Arn}", "${StreamIteratorAgeAlarm.Arn}"]}},
+
+              {"type": "metric", "x": 0, "y": 3, "width": 12, "height": 6,
+               "properties": {"title": "API requests and errors", "region": "${AWS::Region}", "stat": "Sum", "period": 60,
+                 "metrics": [
+                   ["AWS/ApiGateway", "Count", "ApiName", "${ApiName}", "Stage", "${Stage}"],
+                   [".", "4XXError", ".", ".", ".", "."],
+                   [".", "5XXError", ".", ".", ".", "."]]}},
+              {"type": "metric", "x": 12, "y": 3, "width": 12, "height": 6,
+               "properties": {"title": "API latency (ms)", "region": "${AWS::Region}", "period": 60,
+                 "metrics": [
+                   ["AWS/ApiGateway", "Latency", "ApiName", "${ApiName}", "Stage", "${Stage}", {"stat": "p50"}],
+                   ["...", {"stat": "p95"}],
+                   [".", "IntegrationLatency", ".", ".", ".", ".", {"stat": "p95"}]]}},
+
+              {"type": "metric", "x": 0, "y": 9, "width": 12, "height": 6,
+               "properties": {"title": "Task lifecycle", "region": "${AWS::Region}", "stat": "Sum", "period": 60,
+                 "metrics": [
+                   ["ServerlessTodo/${Stage}", "SchedulesCreated"],
+                   [".", "SchedulesCancelled"],
+                   [".", "TasksExpired"],
+                   [".", "ExpiryNotificationsSent"]]}},
+              {"type": "metric", "x": 12, "y": 9, "width": 12, "height": 6,
+               "properties": {"title": "Expiry pipeline health", "region": "${AWS::Region}", "period": 60,
+                 "metrics": [
+                   ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "${TaskEventsQueue.QueueName}", {"stat": "Maximum", "label": "Task events waiting"}],
+                   [".", "ApproximateAgeOfOldestMessage", ".", ".", {"stat": "Maximum", "label": "Oldest task event (s)", "yAxis": "right"}],
+                   [".", "ApproximateNumberOfMessagesVisible", ".", "${TaskEventsDlq.QueueName}", {"stat": "Maximum", "label": "Task events DLQ"}],
+                   ["...", "${StreamFailuresDlq.QueueName}", {"stat": "Maximum", "label": "Stream failures DLQ"}],
+                   ["...", "${ExpiryDlq.QueueName}", {"stat": "Maximum", "label": "Expiry DLQ"}],
+                   ["AWS/Lambda", "IteratorAge", "FunctionName", "${StreamProcessorFunction}", {"stat": "Maximum", "label": "Stream lag (ms)", "yAxis": "right"}]]}},
+
+              {"type": "metric", "x": 0, "y": 15, "width": 8, "height": 6,
+               "properties": {"title": "Lambda invocations", "region": "${AWS::Region}", "stat": "Sum", "period": 60,
+                 "metrics": [
+                   ["AWS/Lambda", "Invocations", "FunctionName", "${TasksApiFunction}"],
+                   ["...", "${StreamProcessorFunction}"],
+                   ["...", "${SchedulerFunction}"],
+                   ["...", "${ExpiryFunction}"],
+                   ["...", "${PreSignUpFunction}"],
+                   ["...", "${PostAuthFunction}"]]}},
+              {"type": "metric", "x": 8, "y": 15, "width": 8, "height": 6,
+               "properties": {"title": "Lambda errors and throttles", "region": "${AWS::Region}", "stat": "Sum", "period": 60,
+                 "metrics": [
+                   ["AWS/Lambda", "Errors", "FunctionName", "${TasksApiFunction}"],
+                   ["...", "${StreamProcessorFunction}"],
+                   ["...", "${SchedulerFunction}"],
+                   ["...", "${ExpiryFunction}"],
+                   ["...", "${PreSignUpFunction}"],
+                   ["...", "${PostAuthFunction}"],
+                   [".", "Throttles", ".", "${TasksApiFunction}"]]}},
+              {"type": "metric", "x": 16, "y": 15, "width": 8, "height": 6,
+               "properties": {"title": "Lambda duration p95 (ms)", "region": "${AWS::Region}", "stat": "p95", "period": 60,
+                 "metrics": [
+                   ["AWS/Lambda", "Duration", "FunctionName", "${TasksApiFunction}"],
+                   ["...", "${StreamProcessorFunction}"],
+                   ["...", "${SchedulerFunction}"],
+                   ["...", "${ExpiryFunction}"],
+                   ["...", "${PostAuthFunction}"]]}},
+
+              {"type": "metric", "x": 0, "y": 21, "width": 12, "height": 6,
+               "properties": {"title": "DynamoDB capacity", "region": "${AWS::Region}", "stat": "Sum", "period": 60,
+                 "metrics": [
+                   ["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", "${TasksTable}"],
+                   [".", "ConsumedWriteCapacityUnits", ".", "."]]}},
+              {"type": "metric", "x": 12, "y": 21, "width": 12, "height": 6,
+               "properties": {"title": "DynamoDB throttles and errors", "region": "${AWS::Region}", "stat": "Sum", "period": 60,
+                 "metrics": [
+                   ["AWS/DynamoDB", "ThrottledRequests", "TableName", "${TasksTable}", "Operation", "PutItem"],
+                   ["...", "Query"],
+                   ["...", "UpdateItem"],
+                   [".", "SystemErrors", ".", ".", ".", "PutItem"]]}}
+            ]
+          }
+        - ApiName: !Sub ${AWS::StackName}-api
+
 Outputs:
+  OperationsDashboardUrl:
+    Value: !Sub https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${AWS::StackName}-operations
+  OpsAlarmsTopicArn:
+    Value: !Ref OpsAlarmsTopic
   ApiUrl:
     Value: !Sub https://${TasksApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
   Region:
