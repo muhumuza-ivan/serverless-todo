@@ -23,9 +23,10 @@ env:
   # and passes everything explicitly.
   SAM_CONFIG_ENV: ci
   TESTING_STACK_NAME: serverless-todo-dev
-  TESTING_PIPELINE_EXECUTION_ROLE: arn:aws:iam::765812221756:role/aws-sam-cli-managed-dev-pipel-PipelineExecutionRole-dYkUYzMnzB0j
-  TESTING_CLOUDFORMATION_EXECUTION_ROLE: arn:aws:iam::765812221756:role/aws-sam-cli-managed-dev-p-CloudFormationExecutionRo-FfJohSCVEYBb
-  TESTING_ARTIFACTS_BUCKET: aws-sam-cli-managed-dev-pipeline-r-artifactsbucket-syrqtdnldf3f
+  # Account-specific resources from `sam pipeline bootstrap`, kept in repository secrets.
+  TESTING_PIPELINE_EXECUTION_ROLE: ${{ secrets.TESTING_PIPELINE_EXECUTION_ROLE }}
+  TESTING_CLOUDFORMATION_EXECUTION_ROLE: ${{ secrets.TESTING_CLOUDFORMATION_EXECUTION_ROLE }}
+  TESTING_ARTIFACTS_BUCKET: ${{ secrets.TESTING_ARTIFACTS_BUCKET }}
   TESTING_REGION: eu-west-1
   TESTING_PARAMETERS: Stage=dev
 
