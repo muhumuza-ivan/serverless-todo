@@ -18,7 +18,7 @@ The editable source is [`architecture.drawio`](architecture.drawio) (open it in 
 |---|---|---|
 | Frontend hosting | Amplify Hosting, SSM Parameter Store, Secrets Manager | Amplify builds the frontend from GitHub on every push. Backend settings (`VITE_*`) reach the build as Amplify secrets stored in SSM; the GitHub token comes from Secrets Manager. |
 | Authentication | Cognito User Pool, 2 Lambda triggers | Email/password sign-up. **PreSignUp** auto-confirms the user; **PostAuthentication** subscribes the user's email to the notifications topic. |
-| Task API | API Gateway (REST), Lambda, DynamoDB | A Cognito authorizer validates the ID token; one Lambda serves all CRUD routes against a single DynamoDB table. |
+| Task API | API Gateway (REST), Lambda, DynamoDB | The frontend, running in the browser, calls the REST API with the user's Cognito ID token. A Cognito authorizer validates the token, CORS allows only the Amplify app's origin, and one Lambda serves all CRUD routes against a single DynamoDB table. |
 | Expiry pipeline | DynamoDB Streams, Lambda, SQS FIFO, EventBridge Scheduler, SNS | Task changes are turned into one-time schedules that fire at each deadline (see below). |
 | Observability | CloudWatch, X-Ray, SNS | JSON logs, business metrics, alarms, an operations dashboard and tracing on every function. |
 

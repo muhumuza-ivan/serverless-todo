@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net">
   <diagram id="serverless-todo-architecture" name="Architecture">
-    <mxGraphModel dx="2009" dy="1466" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1920" pageHeight="1080" math="0" shadow="0">
+    <mxGraphModel dx="1875" dy="1395" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1920" pageHeight="1080" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -28,24 +28,29 @@
         <mxCell id="grp_obs" parent="1" style="fillColor=none;strokeColor=#5A6C86;dashed=1;verticalAlign=top;fontStyle=0;fontColor=#5A6C86;whiteSpace=wrap;html=1;align=left;spacingLeft=10;fontSize=12;" value="Observability (JSON logs + X-Ray tracing on every Lambda)" vertex="1">
           <mxGeometry height="190" width="560" x="210" y="590" as="geometry" />
         </mxCell>
-        <mxCell id="e_users_api" edge="1" parent="1" source="users" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="apigw" value="HTTPS REST + JWT">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e_amplify_api" edge="1" parent="1" source="amplify" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" target="apigw" value="Frontend calls REST API (HTTPS)&lt;br&gt;Authorization: Cognito ID token">
+          <mxGeometry relative="1" x="-0.3" as="geometry">
+            <mxPoint x="95" as="offset" />
+          </mxGeometry>
         </mxCell>
-        <mxCell id="e_users_amplify" edge="1" parent="1" source="users" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" target="amplify" value="HTTPS (SPA)">
-          <mxGeometry relative="1" as="geometry">
+        <mxCell id="e_users_amplify" edge="1" parent="1" source="users" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" target="amplify" value="Loads web app (HTTPS)">
+          <mxGeometry relative="1" x="0.3786" as="geometry">
             <Array as="points">
-              <mxPoint x="200" y="415" />
+              <mxPoint x="80" y="440" />
+              <mxPoint x="200" y="440" />
               <mxPoint x="200" y="195" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="e_users_cognito" edge="1" parent="1" source="users" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" target="cognito" value="Sign-up / sign-in (SRP)">
-          <mxGeometry relative="1" as="geometry">
+        <mxCell id="e_users_cognito" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;" value="Sign-up / sign-in (SRP)">
+          <mxGeometry relative="1" x="-0.0434" as="geometry">
             <Array as="points">
-              <mxPoint x="140" y="400" />
-              <mxPoint x="140" y="90" />
-              <mxPoint x="875" y="90" />
+              <mxPoint x="137.55" y="410" />
+              <mxPoint x="137.55" y="90" />
+              <mxPoint x="872.55" y="90" />
             </Array>
+            <mxPoint x="107.5" y="410" as="sourcePoint" />
+            <mxPoint x="872.5" y="110" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="e_github_amplify" edge="1" parent="1" source="github" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" target="amplify" value="Build on push">
@@ -73,10 +78,10 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="e_api_cognito" edge="1" parent="1" source="apigw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;dashed=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="cognito" value="Cognito authorizer validates JWT">
+        <mxCell id="e_api_cognito" edge="1" parent="1" source="apigw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;dashed=1;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="cognito" value="Cognito authorizer validates JWT">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="280" y="305" />
+              <mxPoint x="295" y="305" />
               <mxPoint x="890" y="305" />
             </Array>
           </mxGeometry>
@@ -159,7 +164,7 @@
           <mxGeometry height="60" width="60" x="50" y="135" as="geometry" />
         </mxCell>
         <mxCell id="users" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.users;labelBackgroundColor=default;" value="Users&lt;br&gt;(browser)" vertex="1">
-          <mxGeometry height="60" width="60" x="50" y="400" as="geometry" />
+          <mxGeometry height="60" width="60" x="40" y="390" as="geometry" />
         </mxCell>
         <mxCell id="ops" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.user;labelBackgroundColor=default;" value="Operator&lt;br&gt;(AlarmEmail)" vertex="1">
           <mxGeometry height="50" width="50" x="55" y="645" as="geometry" />
