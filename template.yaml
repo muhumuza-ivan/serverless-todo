@@ -953,11 +953,37 @@ Resources:
         - ApiName: !Sub ${AWS::StackName}-api
 
   # ---------------------------------------------------------------------------
-  # Frontend hosting (Amplify). Backend values are injected as build-time
-  # environment variables read by the React app (src/amplify.ts).
-  # They live on the branch, not the app, so the dependency chain is
-  # App -> API (CORS origin = app URL) -> Branch (API URL), with no cycle.
+  # Frontend hosting (Amplify). Backend values are provided to the build as
+  # Amplify secrets: SSM parameters under /amplify/{appId}/{branch}/, which
+  # Amplify exposes to the build as the JSON-encoded $secrets variable.
+  # amplify.yml writes them to .env.production for Vite (src/amplify.ts).
+  # The dependency chain is App -> API (CORS origin = app URL) -> secrets
+  # (API URL) -> Branch, with no cycle.
   # ---------------------------------------------------------------------------
+  AmplifyServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: amplify.amazonaws.com
+            Action: sts:AssumeRole
+
+  # Separate from the role so it can reference the app ID without a cycle.
+  AmplifySecretsPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: read-amplify-secrets
+      Roles: [!Ref AmplifyServiceRole]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: ssm:GetParametersByPath
+            Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/amplify/${AmplifyApp.AppId}/*
+
   AmplifyApp:
     Type: AWS::Amplify::App
     Properties:
@@ -965,6 +991,7 @@ Resources:
       Description: Serverless To-Do web frontend
       Repository: !Ref FrontendRepositoryUrl
       AccessToken: !Sub '{{resolve:secretsmanager:${GitHubTokenSecretName}:SecretString}}'
+      IAMServiceRole: !GetAtt AmplifyServiceRole.Arn
       Platform: WEB
       # Single-page app: serve index.html for any path that isn't a static asset.
       CustomRules:
@@ -972,22 +999,46 @@ Resources:
           Target: /index.html
           Status: '200'
 
+  # CloudFormation cannot create SecureString parameters, so these are String
+  # parameters at the Amplify secrets path. The values are not confidential:
+  # they are compiled into the public JavaScript bundle.
+  RegionSecret:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /amplify/${AmplifyApp.AppId}/${FrontendBranch}/VITE_REGION
+      Type: String
+      Value: !Ref AWS::Region
+
+  UserPoolIdSecret:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /amplify/${AmplifyApp.AppId}/${FrontendBranch}/VITE_USER_POOL_ID
+      Type: String
+      Value: !Ref UserPool
+
+  UserPoolClientIdSecret:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /amplify/${AmplifyApp.AppId}/${FrontendBranch}/VITE_USER_POOL_CLIENT_ID
+      Type: String
+      Value: !Ref UserPoolClient
+
+  ApiUrlSecret:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /amplify/${AmplifyApp.AppId}/${FrontendBranch}/VITE_API_URL
+      Type: String
+      Value: !Sub https://${TasksApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
+
   AmplifyBranch:
     Type: AWS::Amplify::Branch
+    # Secrets must exist (and be readable) before the branch builds.
+    DependsOn: [AmplifySecretsPolicy, RegionSecret, UserPoolIdSecret, UserPoolClientIdSecret, ApiUrlSecret]
     Properties:
       AppId: !GetAtt AmplifyApp.AppId
       BranchName: !Ref FrontendBranch
       EnableAutoBuild: true
       Stage: !If [IsProd, PRODUCTION, DEVELOPMENT]
-      EnvironmentVariables:
-        - Name: VITE_REGION
-          Value: !Ref AWS::Region
-        - Name: VITE_USER_POOL_ID
-          Value: !Ref UserPool
-        - Name: VITE_USER_POOL_CLIENT_ID
-          Value: !Ref UserPoolClient
-        - Name: VITE_API_URL
-          Value: !Sub https://${TasksApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
 
 Outputs:
   AmplifyAppId:
