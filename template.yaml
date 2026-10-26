@@ -8,7 +8,7 @@ Parameters:
   Stage:
     Type: String
     Default: dev
-    AllowedValues: [dev, prod]
+    AllowedValues: [dev]
     Description: Deployment stage, used in resource names and the API stage.
   LogRetentionDays:
     Type: Number
@@ -38,7 +38,6 @@ Parameters:
 
 Conditions:
   HasAlarmEmail: !Not [!Equals [!Ref AlarmEmail, '']]
-  IsProd: !Equals [!Ref Stage, prod]
   HasCustomOrigin: !Not [!Equals [!Ref AllowedOrigin, '']]
 
 Globals:
@@ -1038,7 +1037,7 @@ Resources:
       AppId: !GetAtt AmplifyApp.AppId
       BranchName: !Ref FrontendBranch
       EnableAutoBuild: true
-      Stage: !If [IsProd, PRODUCTION, DEVELOPMENT]
+      Stage: DEVELOPMENT
 
 Outputs:
   AmplifyAppId:
