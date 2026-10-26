@@ -1,0 +1,242 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="serverless-todo-architecture" name="Architecture">
+    <mxGraphModel dx="2009" dy="1466" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1920" pageHeight="1080" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;fontColor=#232F3E;" value="Serverless To-Do – AWS Architecture" vertex="1">
+          <mxGeometry height="30" width="700" x="160" y="-40" as="geometry" />
+        </mxCell>
+        <mxCell id="grp_cloud" parent="1" style="outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=1;container=0;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud_alt;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" value="AWS Cloud" vertex="1">
+          <mxGeometry height="860" width="1640" x="160" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="grp_region" parent="1" style="outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=0;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_region;strokeColor=#00A4A6;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#147EBA;dashed=1;" value="AWS Region – stack serverless-todo (stage: dev)" vertex="1">
+          <mxGeometry height="790" width="1600" x="180" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="grp_frontend" parent="1" style="fillColor=none;strokeColor=#5A6C86;dashed=1;verticalAlign=top;fontStyle=0;fontColor=#5A6C86;whiteSpace=wrap;html=1;align=left;spacingLeft=10;fontSize=12;" value="Frontend hosting" vertex="1">
+          <mxGeometry height="190" width="560" x="210" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="grp_auth" parent="1" style="fillColor=none;strokeColor=#5A6C86;dashed=1;verticalAlign=top;fontStyle=0;fontColor=#5A6C86;whiteSpace=wrap;html=1;align=left;spacingLeft=10;fontSize=12;" value="Authentication" vertex="1">
+          <mxGeometry height="190" width="560" x="820" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="grp_api" parent="1" style="fillColor=none;strokeColor=#5A6C86;dashed=1;verticalAlign=top;fontStyle=0;fontColor=#5A6C86;whiteSpace=wrap;html=1;align=left;spacingLeft=10;fontSize=12;" value="Task API &amp; data" vertex="1">
+          <mxGeometry height="200" width="560" x="210" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="grp_expiry" parent="1" style="fillColor=none;strokeColor=#5A6C86;dashed=1;verticalAlign=top;fontStyle=0;fontColor=#5A6C86;whiteSpace=wrap;html=1;align=left;spacingLeft=10;fontSize=12;" value="Event-driven expiry pipeline" vertex="1">
+          <mxGeometry height="440" width="930" x="820" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="grp_obs" parent="1" style="fillColor=none;strokeColor=#5A6C86;dashed=1;verticalAlign=top;fontStyle=0;fontColor=#5A6C86;whiteSpace=wrap;html=1;align=left;spacingLeft=10;fontSize=12;" value="Observability (JSON logs + X-Ray tracing on every Lambda)" vertex="1">
+          <mxGeometry height="190" width="560" x="210" y="590" as="geometry" />
+        </mxCell>
+        <mxCell id="e_users_api" edge="1" parent="1" source="users" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="apigw" value="HTTPS REST + JWT">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_users_amplify" edge="1" parent="1" source="users" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" target="amplify" value="HTTPS (SPA)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="200" y="415" />
+              <mxPoint x="200" y="195" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_users_cognito" edge="1" parent="1" source="users" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" target="cognito" value="Sign-up / sign-in (SRP)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="140" y="400" />
+              <mxPoint x="140" y="90" />
+              <mxPoint x="875" y="90" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_github_amplify" edge="1" parent="1" source="github" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" target="amplify" value="Build on push">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_amplify_ssm" edge="1" parent="1" source="amplify" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="ssm" value="Reads VITE_* at build">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_secrets_amplify" edge="1" parent="1" source="secrets" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;dashed=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="amplify" value="GitHub token (resolved at deploy)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="660" y="122" />
+              <mxPoint x="280" y="122" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_cognito_presignup" edge="1" parent="1" source="cognito" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="presignup" value="PreSignUp trigger">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_cognito_postauth" edge="1" parent="1" source="cognito" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="postauth" value="PostAuthentication trigger">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="905" y="125" />
+              <mxPoint x="1280" y="125" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_api_cognito" edge="1" parent="1" source="apigw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;dashed=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="cognito" value="Cognito authorizer validates JWT">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="280" y="305" />
+              <mxPoint x="890" y="305" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_api_tasksfn" edge="1" parent="1" source="apigw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="tasksfn" value="Lambda proxy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tasksfn_ddb" edge="1" parent="1" source="tasksfn" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="ddb" value="Get / Put / Delete / Query">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ddb_streamfn" edge="1" parent="1" source="ddb" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="streamfn" value="DynamoDB Streams&lt;br&gt;(filter SK = TASK#*)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_streamfn_sqs" edge="1" parent="1" source="streamfn" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="sqs" value="SCHEDULE / CANCEL">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_sqs_schedfn" edge="1" parent="1" source="sqs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="schedfn" value="Event source&lt;br&gt;(batch 10)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_schedfn_eb" edge="1" parent="1" source="schedfn" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="eb" value="Upsert / delete&lt;br&gt;one-time schedule">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_eb_expiryfn" edge="1" parent="1" source="eb" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="expiryfn" value="Invoke at deadline&lt;br&gt;(live alias)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_expiryfn_ddb" edge="1" parent="1" source="expiryfn" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="ddb" value="Mark Expired (Get / UpdateItem)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1690" y="325" />
+              <mxPoint x="660" y="325" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_expiryfn_sns" edge="1" parent="1" source="expiryfn" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="sns" value="Publish">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_postauth_sns" edge="1" parent="1" source="postauth" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="sns" value="sns:Subscribe (email)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1590" y="180" />
+              <mxPoint x="1590" y="650" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_streamfn_dlq" edge="1" parent="1" source="streamfn" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#DD344C;strokeWidth=1.5;fontSize=10;fontColor=#DD344C;labelBackgroundColor=default;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="streamdlq" value="On failure">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_sqs_dlq" edge="1" parent="1" source="sqs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#DD344C;strokeWidth=1.5;fontSize=10;fontColor=#DD344C;labelBackgroundColor=default;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="taskdlq" value="Redrive after 5 receives">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_schedfn_role" edge="1" parent="1" source="schedfn" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="role" value="iam:PassRole">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_role_eb" edge="1" parent="1" source="role" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.8;entryDx=0;entryDy=0;" target="eb" value="Assumed by Scheduler">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1400" y="650" />
+              <mxPoint x="1400" y="448" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_eb_dlq" edge="1" parent="1" source="eb" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#DD344C;strokeWidth=1.5;fontSize=10;fontColor=#DD344C;labelBackgroundColor=default;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="expirydlq" value="Undeliverable">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_sns_owner" edge="1" parent="1" source="sns" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="owner" value="Task-expired email">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1690" y="820" />
+              <mxPoint x="80" y="820" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_cw_opssns" edge="1" parent="1" source="cw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="opssns" value="Alarm state change">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_opssns_ops" edge="1" parent="1" source="opssns" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#545B64;strokeWidth=1.5;fontSize=10;fontColor=#232F3E;labelBackgroundColor=default;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="ops" value="Alarm email (optional)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="github" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.git_repository;labelBackgroundColor=default;" value="GitHub&lt;br&gt;serverless-todo-frontend" vertex="1">
+          <mxGeometry height="60" width="60" x="50" y="135" as="geometry" />
+        </mxCell>
+        <mxCell id="users" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.users;labelBackgroundColor=default;" value="Users&lt;br&gt;(browser)" vertex="1">
+          <mxGeometry height="60" width="60" x="50" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="ops" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.user;labelBackgroundColor=default;" value="Operator&lt;br&gt;(AlarmEmail)" vertex="1">
+          <mxGeometry height="50" width="50" x="55" y="645" as="geometry" />
+        </mxCell>
+        <mxCell id="owner" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.user;labelBackgroundColor=default;" value="Task owner&lt;br&gt;(email inbox)" vertex="1">
+          <mxGeometry height="50" width="50" x="55" y="880" as="geometry" />
+        </mxCell>
+        <mxCell id="amplify" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.amplify;labelBackgroundColor=default;" value="AWS Amplify Hosting&lt;br&gt;(app + main branch)" vertex="1">
+          <mxGeometry height="60" width="60" x="250" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="ssm" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.systems_manager;labelBackgroundColor=default;" value="SSM Parameter Store&lt;br&gt;/amplify/{appId}/main/VITE_*" vertex="1">
+          <mxGeometry height="60" width="60" x="440" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="secrets" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.secrets_manager;labelBackgroundColor=default;" value="Secrets Manager&lt;br&gt;GitHub token" vertex="1">
+          <mxGeometry height="60" width="60" x="630" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="cognito" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cognito;labelBackgroundColor=default;" value="Amazon Cognito&lt;br&gt;User Pool + web client" vertex="1">
+          <mxGeometry height="60" width="60" x="860" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="presignup" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;labelBackgroundColor=default;" value="Lambda&lt;br&gt;pre-signup" vertex="1">
+          <mxGeometry height="60" width="60" x="1060" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="postauth" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;labelBackgroundColor=default;" value="Lambda&lt;br&gt;post-auth" vertex="1">
+          <mxGeometry height="60" width="60" x="1250" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="apigw" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;labelBackgroundColor=default;" value="Amazon API Gateway&lt;br&gt;REST API (stage dev)" vertex="1">
+          <mxGeometry height="60" width="60" x="250" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="tasksfn" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;labelBackgroundColor=default;" value="Lambda&lt;br&gt;tasks-api" vertex="1">
+          <mxGeometry height="60" width="60" x="440" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="ddb" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#C925D1;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;labelBackgroundColor=default;" value="Amazon DynamoDB&lt;br&gt;TasksTable (+ GSI1)" vertex="1">
+          <mxGeometry height="60" width="60" x="630" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="streamfn" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;labelBackgroundColor=default;" value="Lambda&lt;br&gt;stream-processor" vertex="1">
+          <mxGeometry height="60" width="60" x="860" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="sqs" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;labelBackgroundColor=default;" value="Amazon SQS FIFO&lt;br&gt;task-events.fifo" vertex="1">
+          <mxGeometry height="60" width="60" x="1060" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="schedfn" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;labelBackgroundColor=default;" value="Lambda&lt;br&gt;scheduler" vertex="1">
+          <mxGeometry height="60" width="60" x="1260" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="eb" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;labelBackgroundColor=default;" value="EventBridge Scheduler&lt;br&gt;group: task-expiry" vertex="1">
+          <mxGeometry height="60" width="60" x="1460" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="expiryfn" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;labelBackgroundColor=default;" value="Lambda&lt;br&gt;expiry" vertex="1">
+          <mxGeometry height="60" width="60" x="1660" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="streamdlq" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#E7157B;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.queue;labelBackgroundColor=default;" value="stream-failures-dlq" vertex="1">
+          <mxGeometry height="34" width="60" x="860" y="633" as="geometry" />
+        </mxCell>
+        <mxCell id="taskdlq" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#E7157B;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.queue;labelBackgroundColor=default;" value="task-events-dlq.fifo" vertex="1">
+          <mxGeometry height="34" width="60" x="1060" y="633" as="geometry" />
+        </mxCell>
+        <mxCell id="role" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#DD344C;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.role;labelBackgroundColor=default;" value="IAM role&lt;br&gt;SchedulerInvokeRole" vertex="1">
+          <mxGeometry height="34" width="60" x="1260" y="633" as="geometry" />
+        </mxCell>
+        <mxCell id="expirydlq" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#E7157B;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.queue;labelBackgroundColor=default;" value="expiry-dlq" vertex="1">
+          <mxGeometry height="34" width="60" x="1460" y="633" as="geometry" />
+        </mxCell>
+        <mxCell id="sns" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sns;labelBackgroundColor=default;" value="Amazon SNS&lt;br&gt;task-notifications" vertex="1">
+          <mxGeometry height="60" width="60" x="1660" y="620" as="geometry" />
+        </mxCell>
+        <mxCell id="opssns" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sns;labelBackgroundColor=default;" value="Amazon SNS&lt;br&gt;ops-alarms" vertex="1">
+          <mxGeometry height="60" width="60" x="250" y="640" as="geometry" />
+        </mxCell>
+        <mxCell id="cw" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch_2;labelBackgroundColor=default;" value="Amazon CloudWatch&lt;br&gt;Logs, metric filters,&lt;br&gt;alarms, dashboard" vertex="1">
+          <mxGeometry height="60" width="60" x="440" y="640" as="geometry" />
+        </mxCell>
+        <mxCell id="xray" parent="1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#C925D1;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.xray;labelBackgroundColor=default;" value="AWS X-Ray&lt;br&gt;tracing" vertex="1">
+          <mxGeometry height="60" width="60" x="630" y="640" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" parent="1" style="text;html=1;align=left;verticalAlign=top;fontSize=11;fontColor=#232F3E;whiteSpace=wrap;" value="&lt;b&gt;Legend&lt;/b&gt;&lt;br&gt;Solid line = synchronous request&amp;nbsp;&amp;nbsp;·&amp;nbsp;&amp;nbsp;Dashed line = async event, config or IAM&amp;nbsp;&amp;nbsp;·&amp;nbsp;&amp;nbsp;Red dashed = dead-letter path&lt;br&gt;No VPC: every service is fully managed and reached over its public AWS endpoint." vertex="1">
+          <mxGeometry height="50" width="900" x="820" y="895" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
